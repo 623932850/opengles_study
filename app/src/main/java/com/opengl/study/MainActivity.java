@@ -1,11 +1,10 @@
 package com.opengl.study;
 
-import android.opengl.GLES10;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
-import android.provider.Settings;
-import android.support.v7.app.AppCompatActivity;
+import android.opengl.Matrix;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
 import java.nio.ByteBuffer;
@@ -29,9 +28,10 @@ public class MainActivity extends AppCompatActivity {
     static final float[] color = new float[]{255f, 0f, 0f, 1.0f};
 
     static final String VertexSource =
+            "uniform mat4 uMVPMatrix;" +
             "attribute vec4 vPosition;" +
             "void main(){" +
-            "  gl_Position=vPosition;" +
+            "  gl_Position = uMVPMatrix  * vPosition;" +
             "}";
 
     static final String FragSource =
@@ -44,6 +44,12 @@ public class MainActivity extends AppCompatActivity {
     FloatBuffer vertexBuffer;
 
     int program;
+
+    private float[] mViewMatrix = new float[16];
+    private float[] mProjectMatrix = new float[16];
+    private float[] mMVPMatrix = new float[16];
+
+    private int mMVPMatrixHandle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,14 +90,27 @@ public class MainActivity extends AppCompatActivity {
             public void onSurfaceChanged(GL10 unused, int width, int height) {
                 Log.d("surface", "onSurfaceChanged");
                 GLES20.glViewport(0, 0, width, height);
+                float radio = (float)width / height;
+                Matrix.frustumM(mProjectMatrix, 0, -radio, radio, -1, 1, 3, 7);
 
             }
 
             @Override
             public void onDrawFrame(GL10 gl) {
                 Log.d("surface", "onDrawFrame");
+
+
+
                 GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
                 GLES20.glUseProgram(program);
+
+                Matrix.setLookAtM(mViewMatrix, 0, 0, 0, -3, 0, 0, 0, 0, 1, 0);
+                Matrix.multiplyMM(mMVPMatrix, 0, mProjectMatrix, 0, mViewMatrix, 0);
+
+                mMVPMatrixHandle = GLES20.glGetUniformLocation(program, "uMVPMatrix");
+                GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
+
+
                 int vertexAttributeIndex = GLES20.glGetAttribLocation(program, "vPosition");
                 GLES20.glEnableVertexAttribArray(vertexAttributeIndex);
                 GLES20.glVertexAttribPointer(vertexAttributeIndex, 3, GLES20.GL_FLOAT, false, 12, vertexBuffer);
